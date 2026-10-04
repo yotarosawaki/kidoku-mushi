@@ -103,6 +103,9 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(-
 @keyframes pop{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 .row.her{align-self:flex-start}
 .row.me{align-self:flex-end;flex-direction:row-reverse}
+.ava.m-yami{background:linear-gradient(150deg,#b9a6e8,#5b4a8f);color:#f3ecff}
+.ava.m-ikari{background:linear-gradient(150deg,#ff9b9b,#d7263d);color:#fff}
+.ava{transition:background .4s}
 .row .ava{width:36px;height:36px;align-self:flex-start;font-size:14px}
 .row.cont .ava{visibility:hidden}
 .col{display:flex;flex-direction:column;gap:3px;min-width:0}
@@ -201,16 +204,17 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(-
       <p class="lead">サークルの飲み会の夜。彼女のみゆから、連絡が止まらない。返信をまちがえても、放っておいても、朝は来ない。</p>
       <ul class="howto">
         <li>返信は候補から選ぶか、自分で打って送る</li>
-        <li>返信が遅いと「追いLINE」が来て、不安がたまる</li>
+        <li>返信が遅いと「追いLINE」が来て、不安がたまる。早すぎても疑われる</li>
+        <li>みゆの気分しだいで、同じ返事が逆効果になる。ステータスメッセージとアイコンの色に注意</li>
         <li>不安が100、または好感が0でバッドエンド</li>
         <li>朝7時まで続けば生還。エンディングは全9種</li>
       </ul>
       <div>
         <p class="lbl">返信の制限時間</p>
         <div class="seg" id="diff">
-          <button type="button" data-d="yuru" aria-pressed="false">ゆるめ<span>30秒</span></button>
-          <button type="button" data-d="normal" aria-pressed="true">ふつう<span>15秒</span></button>
-          <button type="button" data-d="oni" aria-pressed="false">鬼<span>8秒</span></button>
+          <button type="button" data-d="yuru" aria-pressed="false">ゆるめ<span>25秒</span></button>
+          <button type="button" data-d="normal" aria-pressed="true">ふつう<span>12秒</span></button>
+          <button type="button" data-d="oni" aria-pressed="false">鬼<span>6秒</span></button>
         </div>
       </div>
       <button class="start" id="startBtn" type="button">トークを開く</button>
@@ -226,7 +230,7 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(-
   <section id="chat" class="screen chat" hidden>
     <header class="hdr">
       <button class="back" id="backBtn" type="button" aria-label="タイトルに戻る">‹</button>
-      <div class="ava">み</div>
+      <div class="ava m-amae" id="hdrAva">み</div>
       <div class="nm">みゆ<span id="hdrSub">オンライン</span></div>
       <div class="icons" aria-hidden="true">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5" stroke-linecap="round"/></svg>
@@ -299,90 +303,144 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(-
 const $ = s => document.querySelector(s);
 
 /* ================= シナリオ ================= */
-// 吹き出しの種類: "文字" / {s:"絵文字スタンプ"} / {photo:"selfie|story|group"} / {sys:"システム表示"} / {miss:1} 不在着信
+// 吹き出し: "文字" / {s:"絵文字スタンプ"} / {photo:"selfie|story|group|dressA|dressB"} / {sys:"システム表示"} / {miss:1} 不在着信
+// tag: sweet 甘い言葉 / question 気持ちを聞く / apology 謝る / logic 説明・正論 / action 行動で示す / cold 素っ気ない
+// flag: その選択を覚えておき、あとで蒸し返される
 const NODES = [
   { time:'22:04', msgs:['ねえ','いま何してるの？'], choices:[
-    { t:'ごめん！サークルの飲み会中だよ。どうした？', love:5, anx:-5, r:['飲み会…','そっか、楽しそうでいいね','…で、誰がいるの？'] },
-    { t:'飲み会', love:-5, anx:15, r:['え、それだけ？','なんでちゃんと説明してくれないの'] },
-    { t:'家でゴロゴロしてるよ〜', love:-5, anx:30, r:[{photo:'story'},'これ、さっき上がったたかしくんのストーリーなんだけど','うしろに写ってるの、だれ？','なんで嘘つくの？'] },
-    { t:'いま忙しい、あとで', love:-8, anx:20, r:['忙しいって何？','みゆより大事なこと？'] },
+    { t:'ごめん！サークルの飲み会中だよ。どうした？', tag:'question', love:5, anx:-5, r:['飲み会…','そっか、楽しそうでいいね','…で、誰がいるの？'] },
+    { t:'飲み会', tag:'cold', love:-6, anx:15, r:['え、それだけ？','なんでちゃんと説明してくれないの'] },
+    { t:'家でゴロゴロしてるよ〜', flag:'lie', love:-8, anx:30, r:[{photo:'story'},'これ、さっき上がったたかしくんのストーリーなんだけど','うしろに写ってるの、だれ？','なんで嘘つくの？'] },
+    { t:'いま忙しい、あとで', tag:'cold', love:-8, anx:20, r:['忙しいって何？','みゆより大事なこと？'] },
   ]},
   { time:'22:11', msgs:['女の子もいるの？'], choices:[
-    { t:'何人かいるけど、ずっとみゆの話してるよ', love:8, anx:-10, r:['え、ほんと？','なんの話したの…？','あとで全部おしえてね'] },
-    { t:'いないよ', love:-3, anx:15, r:['ふーん','でもさっき、サークルの女の子もいくって言ってたよね'] },
-    { t:'みんなで写真撮って送るね', love:5, anx:-12, r:[{photo:'group'},'…男の子ばっか。よかった','でも右はしの子、ちょっと近くない？'] },
-    { t:'それ答える必要ある？', love:-15, anx:25, r:['は？','答えられないってことだよね'] },
+    { t:'何人かいるけど、ずっとみゆの話してるよ', tag:'sweet', love:8, anx:-10, r:['え、ほんと？','なんの話したの…？','あとで全部おしえてね'] },
+    { t:'いないよ', tag:'logic', love:-3, anx:15, r:['ふーん','でもさっき、サークルの女の子もいくって言ってたよね'] },
+    { t:'みんなで写真撮って送るね', tag:'action', flag:'photo', love:5, anx:-12, r:[{photo:'group'},'…男の子ばっか。よかった','でも右はしの子、ちょっと近くない？'] },
+    { t:'それ答える必要ある？', tag:'cold', love:-15, anx:25, r:['は？','答えられないってことだよね'] },
   ]},
   { time:'22:26', msgs:['ねえ',{s:'🥺'},'みゆより飲み会のほうが大事なんだね'], choices:[
-    { t:'そんなわけない。みゆが一番だよ', love:8, anx:-12, r:['口ではなんとでも言えるよね','…でも、うれしい'] },
-    { t:'いまから抜けて帰るね', love:15, anx:-20, r:['え、いいの？','みゆのために？','…すき'] },
-    { t:'比べるものじゃなくない？', love:-10, anx:18, r:['正論とかいらない','そういうとこだよ'] },
-    { t:'そうかもね（笑）', love:-25, anx:30, r:['（笑）って何','わかった。そういうことね'] },
+    { t:'そんなわけない。みゆが一番だよ', tag:'sweet', love:8, anx:-12, r:['口ではなんとでも言えるよね','…でも、うれしい'] },
+    { t:'いまから抜けて帰るね', tag:'action', flag:'home', love:15, anx:-20, r:['え、いいの？','みゆのために？','…すき'] },
+    { t:'比べるものじゃなくない？', tag:'logic', love:-10, anx:18, r:['正論とかいらない','そういうとこだよ'] },
+    { t:'そうかもね（笑）', tag:'cold', love:-25, anx:30, r:['（笑）って何','わかった。そういうことね'] },
   ]},
   { time:'22:47', msgs:['みてみて',{photo:'selfie'},'前髪切ったの。どう？'], choices:[
-    { t:'え、かわいい！めっちゃ似合ってる', love:10, anx:-10, r:['ほんと？？','やっぱ切ってよかった','保存した？'] },
-    { t:'何か変わった？', love:-15, anx:20, r:['……','前髪って言ってるじゃん','みゆのこと、ちゃんと見てないよね'] },
-    { t:'いいじゃん', love:2, anx:5, r:['「いいじゃん」だけ？','もっと言うことないの？'] },
-    { stamp:'👍', love:-5, anx:15, r:['スタンプで済ませないで'] },
+    { t:'え、かわいい！めっちゃ似合ってる', tag:'sweet', love:10, anx:-10, r:['ほんと？？','やっぱ切ってよかった','保存した？'] },
+    { t:'何か変わった？', tag:'cold', love:-15, anx:20, r:['……','前髪って言ってるじゃん','みゆのこと、ちゃんと見てないよね'] },
+    { t:'いいじゃん', tag:'cold', love:2, anx:5, r:['「いいじゃん」だけ？','もっと言うことないの？'] },
+    { stamp:'👍', tag:'cold', love:-5, anx:15, r:['スタンプで済ませないで'] },
   ]},
   { time:'23:08', msgs:['てかさ','バイトの先輩にフォローされたんだけど','どう思う？'], choices:[
-    { t:'ちょっとやきもちやく', love:10, anx:-12, r:['えへへ','やきもち、うれしい','大丈夫、フォロー返してないよ'] },
-    { t:'別にいいんじゃない？', love:-8, anx:15, r:['え、嫉妬してくれないの？','みゆが誰と仲良くしてもいいんだ'] },
-    { t:'誰それ。ブロックしといて', love:6, anx:-6, r:['え、こわ','…でも、ちょっとうれしいかも','ブロックした'] },
-    { t:'へー', love:-10, anx:15, r:['へーって何','興味ないんだ'] },
+    { t:'ちょっとやきもちやく', tag:'sweet', love:10, anx:-12, r:['えへへ','やきもち、うれしい','大丈夫、フォロー返してないよ'] },
+    { t:'別にいいんじゃない？', tag:'logic', love:-8, anx:15, r:['え、嫉妬してくれないの？','みゆが誰と仲良くしてもいいんだ'] },
+    { t:'誰それ。ブロックしといて', tag:'action', love:6, anx:-6, r:['え、こわ','…でも、ちょっとうれしいかも','ブロックした'] },
+    { t:'へー', tag:'cold', love:-10, anx:15, r:['へーって何','興味ないんだ'] },
   ]},
   { time:'23:31', kind:'call',
     answer:{ love:10, anx:-20, dur:'23:48', cap:['もしもし…？','ううん、なんでもない','声聞きたかっただけ'], r:['声聞けてよかった','やっぱり好き'] },
-    text:{ t:'ごめん、いま出られない。あとでかけるね', love:-2, anx:8, r:['…絶対だよ','かけてこなかったら怒るから'] },
-    decline:{ love:-10, anx:25, r:['なんで切ったの？','いま誰といるの？','出られないような場所？'] },
+    answerIkari:{ love:-5, anx:10, dur:'1:52:07', cap:['……','なんで黙ってるの？','なんか言ってよ','……もういい'], r:['通話中ずっと上の空だったよね','誰かといたんでしょ'] },
+    text:{ t:'ごめん、いま出られない。あとでかけるね', love:-4, anx:12, r:['…絶対だよ','かけてこなかったら怒るから'] },
+    decline:{ love:-12, anx:28, r:['なんで切ったの？','いま誰といるの？','出られないような場所？'] },
   },
   { time:'0:02', msgs:['ねえ','みゆのこと、ほんとに好き？'], choices:[
-    { t:'好きだよ', love:4, anx:-5, r:['…それだけ？','もっと'] },
-    { t:'大好き。何回でも言うよ', love:10, anx:-12, r:['ほんと？','スクショした','明日も言ってね'] },
-    { t:'何回聞くの？', love:-15, anx:25, r:['何回でも聞きたいんだけど','めんどくさいって思ってるでしょ'] },
-    { t:'急にどうしたの？何かあった？', love:10, anx:-18, r:['…なんか、急に不安になっただけ','気づいてくれるの、うれしい'] },
+    { t:'好きだよ', tag:'sweet', love:4, anx:-5, r:['…それだけ？','もっと'] },
+    { t:'大好き。何回でも言うよ', tag:'sweet', love:10, anx:-12, r:['ほんと？','スクショした','明日も言ってね'] },
+    { t:'何回聞くの？', tag:'cold', love:-15, anx:25, r:['何回でも聞きたいんだけど','めんどくさいって思ってるでしょ'] },
+    { t:'急にどうしたの？何かあった？', tag:'question', love:10, anx:-18, r:['…なんか、急に不安になっただけ','気づいてくれるの、うれしい'] },
   ]},
-  { time:'0:24', msgs:['あとさ','リサちゃん（元カノ）のインスタ、まだフォローしてるよね','なんで？'], choices:[
-    { t:'ごめん、忘れてた。いま外すね', love:6, anx:-15, r:['…ほんとに外した？','あ、ほんとだ','ありがと'] },
-    { t:'気にしすぎじゃない？', love:-10, anx:20, r:['気にしすぎって何','みゆが悪いってこと？'] },
-    { t:'スマホ見せてもいいよ、何もないから', love:10, anx:-15, r:['…じゃあ今度見せてね','信じてる'] },
-    { t:'…てか、なんでそれ知ってるの？', love:-10, anx:30, r:['なんでって','全部見てるに決まってるじゃん','見られたら困ることでもあるの？'] },
+  { time:'0:24', msgs:['あとさ','リサちゃん（元カノ）のインスタ、まだフォローしてるよね','なんで？'],
+    pre:[
+      { flag:'home', anx:12, msgs:['てか、ほんとに帰った？','位置情報みたら、まだ駅前だったけど',{s:'🙂'}] },
+      { flag:'photo', anx:6, msgs:['さっきの写真、拡大したら','右はしの子のネイル、女の子だよね'] },
+    ],
+    choices:[
+    { t:'ごめん、忘れてた。いま外すね', tag:'apology', love:6, anx:-15, r:['…ほんとに外した？','あ、ほんとだ','ありがと'] },
+    { t:'気にしすぎじゃない？', tag:'logic', love:-10, anx:20, r:['気にしすぎって何','みゆが悪いってこと？'] },
+    { t:'スマホ見せてもいいよ、何もないから', tag:'action', love:10, anx:-15, r:['…じゃあ今度見せてね','信じてる'] },
+    { t:'…てか、なんでそれ知ってるの？', tag:'question', love:-10, anx:30, r:['なんでって','全部見てるに決まってるじゃん','見られたら困ることでもあるの？'] },
   ]},
   { time:'1:13', msgs:['ねむれない','寝落ち通話して'], choices:[
-    { t:'いいよ、つなご', love:12, anx:-20, r:['やった','先に寝ないでね'] },
-    { t:'明日1限だから、ごめん。おやすみ', love:-3, anx:8, r:['…そっか','おやすみ。夢に出てきてね'] },
-    { t:'羊でも数えれば？', love:-18, anx:20, r:['羊とかいらない','みゆが寝れないの、どうでもいいんだ'] },
-    { stamp:'💤', love:-8, anx:15, r:['寝るの？','ひとりにしないで'] },
+    { t:'いいよ、つなご', tag:'action', love:12, anx:-20, r:['やった','先に寝ないでね'] },
+    { t:'明日1限だから、ごめん。おやすみ', tag:'logic', love:-4, anx:10, r:['…そっか','おやすみ。夢に出てきてね'] },
+    { t:'羊でも数えれば？', tag:'cold', love:-18, anx:20, r:['羊とかいらない','みゆが寝れないの、どうでもいいんだ'] },
+    { stamp:'💤', tag:'cold', love:-8, anx:15, r:['寝るの？','ひとりにしないで'] },
   ]},
-  { time:'2:40', msgs:['ねえ','まだ起きてる？','明日、会える？'], choices:[
-    { t:'もちろん。駅まで迎えに行くね', love:12, anx:-15, r:['うれしい','いちばんかわいい服で行くね'] },
-    { t:'明日はバイトだから、明後日でもいい？', love:0, anx:8, r:['…明後日ね','約束だよ。絶対'] },
+  { time:'2:40', msgs:['ねえ','まだ起きてる？','明日、会える？'],
+    pre:[ { flag:'lie', anx:10, msgs:['あと','今日うそついたこと、まだ許してないから'] } ],
+    choices:[
+    { t:'もちろん。駅まで迎えに行くね', tag:'action', love:12, anx:-15, r:['うれしい','いちばんかわいい服で行くね'] },
+    { t:'明日はバイトだから、明後日でもいい？', tag:'logic', love:0, anx:10, r:['…明後日ね','約束だよ。絶対'] },
     { t:'ちょっと距離置きたいかも', end:'distance' },
     { t:'ごめん、明日はリサと会う約束してて…', end:'ex' },
   ]},
 ];
 
+// 本編のあいだにランダムで3つ差し込まれる理不尽イベント
+const EVENTS = [
+  { id:'nandemo', msgs:['……',{sys:'みゆ がメッセージの送信を取り消しました'},'やっぱなんでもない'], choices:[
+    { t:'わかった', tag:'cold', love:-15, anx:28, r:['わかったって何','なんでもないわけないじゃん','追いかけてもくれないんだ'] },
+    { t:'なんでもなくないでしょ。どうしたの？', tag:'question', love:8, anx:-14, r:['…ほんとはね','ちょっとさみしかっただけ'] },
+    { t:'言いたくなったら言ってね', tag:'logic', love:-4, anx:12, r:['言いたくなるまで待つんだ','優しいふりだよね、それ'] },
+    { t:'取り消したの見えてたよ', tag:'cold', love:-6, anx:20, r:['は？','見えてたなら聞いてよ'] },
+  ]},
+  { id:'okottenai', msgs:['べつに','怒ってないけど'], choices:[
+    { t:'よかった！', tag:'cold', love:-18, anx:30, r:['……','よかったって何？','ほんとにわかんないんだね'] },
+    { t:'ごめん、怒ってるよね。何がいやだった？', tag:'apology', love:8, anx:-14, r:['…わかってくれるならいい','返信、もうちょっと早くして'] },
+    { t:'絶対怒ってるじゃん', tag:'logic', love:-10, anx:18, r:['怒ってないって言ってるじゃん','決めつけないで'] },
+    { t:'ぎゅーってしたい', tag:'sweet', love:4, anx:-4, r:['…ずるい','そういうのでごまかさないで','でも、ちょっとだけ許す'] },
+  ]},
+  { id:'yume', msgs:['さっき、うとうとしてたら夢みたの','ほかの女の子と手つないでた','謝って'], choices:[
+    { t:'ごめん', tag:'apology', love:4, anx:-8, r:['…何に謝ってるの？','まあいいけど'] },
+    { t:'夢の話でしょ？', tag:'logic', love:-14, anx:22, r:['夢でも浮気は浮気だよ','願望が出たんじゃないの'] },
+    { t:'夢の中のおれ、最低だね。ほんとごめん', tag:'apology', love:10, anx:-14, r:['ほんとだよ','…でも謝ってくれたから許す'] },
+    { t:'夢でもみゆしか見てないよ', tag:'sweet', love:6, anx:-6, r:['じゃあ夢の女は誰なの'] },
+  ]},
+  { id:'dress', msgs:['明日着ていく服、どっちがいい？',{photo:'dressA'},{photo:'dressB'}], dress:true, choices:[
+    { t:'Aの黒いほう', pick:'A' },
+    { t:'Bの白いほう', pick:'B' },
+    { t:'どっちもかわいい', tag:'cold', love:-10, anx:15, r:['どっちもって','選んでって言ってるの'] },
+    { t:'みゆが着たいほうでいいよ', tag:'logic', love:-12, anx:16, r:['そういうのが一番いや','興味ないんだね'] },
+  ]},
+  { id:'kidoku', msgs:['ねえ','さっき既読つくまで2分かかったよね','そのあいだ何してたの？'], choices:[
+    { t:'トイレ行ってた', tag:'logic', love:-4, anx:10, r:['スマホ持って行かないの？','ふつう持ってくよね'] },
+    { t:'ごめん、すぐ見られなくて', tag:'apology', love:4, anx:-8, r:['…次は1分以内ね'] },
+    { t:'2分くらいいいでしょ', tag:'cold', love:-14, anx:24, r:['2分もだよ','みゆは2分ずっと画面見てたんだけど'] },
+    { t:'みゆのこと考えてたら遅くなった', tag:'sweet', love:6, anx:-6, r:['なにそれ','…ばか'] },
+  ]},
+];
+
+// 気分ごとに、同じタイプの返事でも効き方が変わる（line があると彼女の反応が差し替わる）
+const MOODS = {
+  amae:  { status:'🎀かまって', avatar:'amae',
+    mod:{ sweet:{love:4,anx:-4}, logic:{love:-6,anx:10,line:['そういうのいいから','あまやかして']}, apology:{anx:6,line:['なんで謝るの？','みゆ、怒ってないけど']} } },
+  yami:  { status:'🌙 ねむれない夜', avatar:'yami',
+    mod:{ sweet:{love:-4,anx:18,line:['…どうせ口だけでしょ','みんなそう言うもん']}, question:{anx:-8}, logic:{anx:12,line:['正しいこと言われるの、しんどい']}, action:{anx:-4} } },
+  ikari: { status:'。', avatar:'ikari',
+    mod:{ apology:{anx:-8}, sweet:{love:-5,anx:18,line:['ごまかさないで']}, question:{anx:12,line:['わかんないの？','自分で考えて']}, cold:{anx:8} } },
+};
+
 const CHASE = [
   [['ねえ'],['既読ついてるよね？'],['ねえってば']],
-  [['なんで無視するの'],[{s:'😢'}],['みゆ、なにかした？']],
-  [[{miss:1},'出てよ'],[{miss:1}],['ねえねえねえねえ']],
-  [['もういい'],[{miss:1},{miss:1}],['返信くるまで寝ないから']],
+  [['なんで無視するの'],[{s:'😢'}],[{sys:'みゆ がメッセージの送信を取り消しました'}]],
+  [[{miss:1},'出てよ'],[{miss:1}],['ねえねえねえねえ'],['いま誰といるの']],
+  [['もういい'],[{miss:1},{miss:1}],['返信くるまで寝ないから'],[{sys:'みゆ がメッセージの送信を取り消しました'},{sys:'みゆ がメッセージの送信を取り消しました'}]],
 ];
 
 const FREE = {
-  love:   { love:10, anx:-12, r:[['…ほんと？','えへへ、うれしい'],['もっと言って',{s:'🥺'}],['じゃあ信じる']] },
-  care:   { love:8,  anx:-15, r:[['…気づいてくれたんだ','ちょっと不安になっただけ'],['ありがと','話きいてくれるの、うれしい']] },
-  sorry:  { love:3,  anx:-8,  r:[['謝ってほしいわけじゃないんだけど…','でも、いいよ'],['…次はないからね']] },
-  neutral:{ love:0,  anx:6,   r:[['ふーん'],['そっか','…なんかそれだけ？']] },
-  cold:   { love:-6, anx:15,  r:[['え、それだけ？','冷たくない？'],['みゆのこと、どうでもいいんだ']] },
-  bad:    { love:-25,anx:25,  r:[['は？','いまなんて言った？'],['…もういい','ひどい']] },
+  sweet:  { tag:'sweet',    love:9,  anx:-10, r:[['…ほんと？','えへへ、うれしい'],['もっと言って',{s:'🥺'}],['じゃあ信じる']] },
+  question:{ tag:'question', love:8, anx:-14, r:[['…気づいてくれたんだ','ちょっと不安になっただけ'],['ありがと','話きいてくれるの、うれしい']] },
+  apology:{ tag:'apology',  love:3,  anx:-8,  r:[['謝ってほしいわけじゃないんだけど…','でも、いいよ'],['…次はないからね']] },
+  neutral:{ tag:'logic',    love:-2, anx:8,   r:[['ふーん'],['そっか','…なんかそれだけ？'],['話そらさないで']] },
+  cold:   { tag:'cold',     love:-8, anx:18,  r:[['え、それだけ？','冷たくない？'],['みゆのこと、どうでもいいんだ']] },
+  bad:    { tag:'cold',     love:-25,anx:28,  r:[['は？','いまなんて言った？'],['…もういい','ひどい']] },
 };
 
 const ENDINGS = {
   onicall:{ rank:'BAD', title:'鬼電END', seq:[{miss:1},{miss:1},{miss:1},{sys:'不在着信 99+件'},'でて','でてよ'],
     desc:'既読をつけたまま放っておいた。スマホは朝まで震え続け、充電は2%になった。', tip:'返信は速さが命。迷ったら一言でも返すと、追いLINEは止まる。' },
   stalker:{ rank:'BAD', title:'家の前にいるEND', seq:['今ね','家の前にいるの','部屋の電気、ついてるね',{sys:'ピンポーン'}],
-    desc:'不安が限界を超えた。彼女は返信を待つのをやめて、会いに来た。', tip:'不安を上げる返事が続くと危ない。「どうしたの？」と気持ちを聞くと下がりやすい。' },
+    desc:'不安が限界を超えた。彼女は返信を待つのをやめて、会いに来た。', tip:'同じ返事でも、みゆの気分しだいで逆効果になる。ステータスメッセージとアイコンの色を見よう。' },
   block:{ rank:'BAD', title:'ブロックEND', seq:['もういい','さよなら',{sys:'このトークにはメッセージを送信できません'}],
     desc:'好感度がゼロになった。もう既読がつくことはない。', tip:'素っ気ない返事やスタンプだけの返信は、少しずつ好感を削る。' },
   distance:{ rank:'BAD', title:'距離を置くEND', seq:['距離？','……','わかった',{sys:'みゆ がステータスメッセージを「信じてたのに」に変更しました'}],
@@ -390,17 +448,18 @@ const ENDINGS = {
   ex:{ rank:'BAD', title:'元カノ発覚END', seq:['は？','リサ？',{s:'🙂'},'リサちゃんに直接きいてみるね',{sys:'みゆ が リサ をフォローしました'}],
     desc:'正直に言えばいいというものでもない。', tip:'元カノの名前は、この夜いちばんの地雷。' },
   watch:{ rank:'NORMAL', title:'位置情報共有END', seq:['おはよ','昨日いろいろ考えたんだけど','位置情報、共有しよ？',{sys:'みゆ から位置情報共有のリクエストが届きました'}],
-    desc:'朝は来た。ただ、これからは毎晩どこにいるかを見られることになった。', tip:'朝までもったが、不安が高いまま。安心させる返事を増やそう。' },
+    desc:'朝は来た。ただ、これからは毎晩どこにいるかを見られることになった。', tip:'朝までもったが、不安が高いまま。不安は時間がたつだけでも上がっていく。' },
   normal:{ rank:'NORMAL', title:'なんとか朝END', seq:['おはよ','昨日はちょっとごめんね','でも今日もちゃんと連絡してね'],
-    desc:'寝不足のまま朝が来た。なんとか関係はつながっている。', tip:'「かわいい」「どうしたの？」は効く。もう少し好感を上げると先がある。' },
+    desc:'寝不足のまま朝が来た。なんとか関係はつながっている。', tip:'甘えたい時は甘い言葉、病んでる時は気持ちを聞く、怒ってる時は謝る。' },
   good:{ rank:'GOOD', title:'ひとまず安心END', seq:['おはよう','昨日はありがと','今日、会えるの楽しみにしてるね',{s:'🫶'}],
-    desc:'彼女は落ち着いて眠れたらしい。あなたは3時間しか寝ていない。', tip:'好感85以上・不安25以下で、もうひとつ先のエンディングへ。' },
+    desc:'彼女は落ち着いて眠れたらしい。あなたは3時間しか寝ていない。', tip:'好感90以上・不安20以下で、もうひとつ先のエンディングへ。' },
   true:{ rank:'TRUE', title:'朝まで寄り添ったEND', seq:['おはよう','昨日、ずっと付き合ってくれてありがとう','重くてごめんね','でも、大好き',{s:'💗'}],
-    desc:'返信の速さより、気持ちをちゃんと聞いたことが伝わった。いい朝だ。', tip:'全エンディング回収を目指してみよう。' },
+    desc:'理不尽な夜を、最後まで投げ出さなかった。いい朝だ。', tip:'全エンディング回収を目指してみよう。' },
 };
 const END_ORDER = ['onicall','stalker','block','distance','ex','watch','normal','good','true'];
 
-const DIFF = { yuru:{sec:30, chase:8}, normal:{sec:15, chase:12}, oni:{sec:8, chase:15} };
+// sec: 返信の制限時間 / chase: 追いLINE1回で上がる不安 / creep: 場面が進むごとに勝手に上がる不安
+const DIFF = { yuru:{sec:25, chase:10, creep:2}, normal:{sec:12, chase:14, creep:4}, oni:{sec:6, chase:18, creep:6} };
 
 /* ================= 状態 ================= */
 let diffKey = 'normal';
@@ -411,13 +470,13 @@ const skips = new Set();
 
 const log = $('#log'), choicesEl = $('#choices'), msgIn = $('#msgIn'), sendBtn = $('#sendBtn');
 
-function store(get, val){
-  try{
-    if(get) return JSON.parse(localStorage.getItem('kidoku-endings') || '[]');
-    localStorage.setItem('kidoku-endings', JSON.stringify(val));
-  }catch(e){ return get ? (S && S.memEnds || []) : null; }
-}
-let gotEnds = store(true) || [];
+let memEnds = [];
+function loadEnds(){ try{ return JSON.parse(localStorage.getItem('kidoku-endings') || '[]'); }catch(e){ return memEnds; } }
+function saveEnds(v){ memEnds = v; try{ localStorage.setItem('kidoku-endings', JSON.stringify(v)); }catch(e){} }
+let gotEnds = loadEnds();
+
+const rnd = a => a[Math.floor(Math.random() * a.length)];
+function shuffle(a){ a = a.slice(); for(let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 
 function sleep(ms){
   return new Promise(res => {
@@ -447,10 +506,13 @@ function buzz(p){ try{ navigator.vibrate && navigator.vibrate(p); }catch(e){} }
 function scrollEnd(){ log.scrollTop = log.scrollHeight; }
 function esc(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
+const dress = (label, body, accent) => `<svg viewBox="0 0 170 190"><rect width="170" height="190" fill="#f3e9ee"/><rect x="0" y="150" width="170" height="40" fill="#e2d3db"/><path d="M85 22v10" stroke="#888" stroke-width="2"/><path d="M70 22q15-12 30 0" stroke="#888" stroke-width="2" fill="none"/><path d="M62 34h46l8 30-10 6 18 78H46l18-78-10-6z" fill="${body}"/><path d="M62 34q23 18 46 0" fill="${accent}"/><circle cx="85" cy="70" r="5" fill="${accent}"/><text x="12" y="176" font-size="15" font-weight="700" fill="#5a2340" font-family="sans-serif">${label}</text></svg>`;
 const PHOTOS = {
   selfie:`<svg viewBox="0 0 170 210"><defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd3e6"/><stop offset="1" stop-color="#f7a8c8"/></linearGradient></defs><rect width="170" height="210" fill="url(#sg)"/><path d="M30 210c4-42 26-60 55-60s51 18 55 60z" fill="#2b2230"/><path d="M38 96c0-38 20-58 47-58s47 20 47 58v70c-10 4-18 0-22-8V112H60v46c-4 8-12 12-22 8z" fill="#2b2230"/><ellipse cx="85" cy="104" rx="34" ry="40" fill="#ffe7da"/><path d="M50 92c6-24 20-34 35-34s29 10 35 34c-12-6-22-8-35-8s-23 2-35 8z" fill="#2b2230"/><path d="M52 84h66" stroke="#2b2230" stroke-width="8"/><ellipse cx="72" cy="106" rx="4" ry="5" fill="#2b2230"/><ellipse cx="98" cy="106" rx="4" ry="5" fill="#2b2230"/><ellipse cx="64" cy="118" rx="7" ry="4" fill="#ff8fb5" opacity=".7"/><ellipse cx="106" cy="118" rx="7" ry="4" fill="#ff8fb5" opacity=".7"/><path d="M78 126q7 6 14 0" stroke="#c4566f" stroke-width="2.5" fill="none" stroke-linecap="round"/><path d="M128 150l6-26M138 151l10-22" stroke="#ffe7da" stroke-width="7" stroke-linecap="round"/><text x="12" y="24" font-size="13" fill="#7a2b50" font-family="sans-serif">前髪 ✂</text></svg>`,
   story:`<svg viewBox="0 0 170 210"><rect width="170" height="210" fill="#2a2433"/><rect x="0" y="0" width="170" height="3" fill="#fff" opacity=".8"/><circle cx="16" cy="18" r="8" fill="#6b7fa8"/><text x="29" y="22" font-size="10" fill="#fff" font-family="sans-serif">takashi_04 · 18分</text><rect x="10" y="120" width="150" height="30" rx="4" fill="#5a3c2a"/><g fill="#8a7a6a"><circle cx="40" cy="96" r="14"/><circle cx="82" cy="92" r="14"/><circle cx="128" cy="96" r="14"/></g><g fill="#4c4258"><rect x="24" y="110" width="32" height="40" rx="12"/><rect x="66" y="106" width="32" height="44" rx="12"/><rect x="112" y="110" width="32" height="40" rx="12"/></g><circle cx="82" cy="92" r="24" fill="none" stroke="#ff3b5c" stroke-width="3"/><text x="12" y="186" font-size="12" fill="#fff" font-family="sans-serif">金曜サークル飲み 🍻</text></svg>`,
   group:`<svg viewBox="0 0 170 150"><rect width="170" height="150" fill="#3a3040"/><rect y="104" width="170" height="46" fill="#6a4a32"/><g fill="#e8c9a8"><circle cx="24" cy="64" r="13"/><circle cx="58" cy="58" r="13"/><circle cx="92" cy="62" r="13"/><circle cx="124" cy="58" r="13"/><circle cx="152" cy="66" r="12"/></g><g fill="#2a2a34"><path d="M11 60a13 13 0 0126 0z"/><path d="M45 54a13 13 0 0126 0z"/><path d="M79 58a13 13 0 0126 0z"/><path d="M111 54a13 13 0 0126 0z"/><path d="M138 62c0-12 7-18 14-18s14 6 14 18v18h-6v-14h-16v14h-6z"/></g><g fill="#5c6b8c"><rect x="10" y="78" width="28" height="30" rx="10"/><rect x="44" y="72" width="28" height="36" rx="10"/><rect x="78" y="76" width="28" height="32" rx="10"/><rect x="110" y="72" width="28" height="36" rx="10"/></g><rect x="140" y="80" width="24" height="28" rx="9" fill="#d98aa8"/><text x="10" y="138" font-size="11" fill="#fff" font-family="sans-serif">男子会（ほぼ）</text></svg>`,
+  dressA: dress('A', '#22192a', '#ff5fa2'),
+  dressB: dress('B', '#ffffff', '#ffb3d1'),
 };
 
 function lastRow(){ const c = log.lastElementChild; return c && c.classList.contains('row') ? c : null; }
@@ -475,11 +537,13 @@ function addRow(who, item){
   const row = document.createElement('div');
   row.className = 'row ' + who + (prev && prev.classList.contains(who) && who === 'her' ? ' cont' : '');
   const meta = item.typing ? '' : `<div class="meta">${who === 'me' ? '<span class="rd" hidden>既読</span>' : ''}<span>${S.clock}</span></div>`;
-  row.innerHTML = (who === 'her' ? '<div class="ava">み</div>' : '') +
+  row.innerHTML = (who === 'her' ? `<div class="ava m-${S.mood}">み</div>` : '') +
     `<div class="col">${who === 'her' ? '<span class="who">みゆ</span>' : ''}${bubbleHTML(item)}</div>` + meta;
   log.appendChild(row); scrollEnd();
   return row;
 }
+
+function setStatus(){ $('#hdrSub').textContent = MOODS[S.mood].status; }
 
 async function her(items, g){
   for(const it of items){
@@ -488,23 +552,41 @@ async function her(items, g){
     $('#hdrSub').textContent = '入力中…';
     const ty = addRow('her', {typing:1});
     const len = typeof it === 'string' ? it.length : 6;
-    await sleep(Math.min(1700, 420 + len * 55));
+    await sleep(Math.min(1600, 380 + len * 50));
     ty.remove();
-    $('#hdrSub').textContent = 'オンライン';
+    setStatus();
     if(g !== S.gen) return false;
     addRow('her', it); blip();
     if(it.miss) buzz([120,80,120]);
-    await sleep(220);
+    await sleep(200);
   }
   return g === S.gen;
 }
 
 function me(item){
   const row = addRow('me', item);
-  setTimeout(() => { const r = row.querySelector('.rd'); if(r) r.hidden = false; }, 350);
+  setTimeout(() => { const r = row.querySelector('.rd'); if(r) r.hidden = false; }, 250);
 }
 
 function setClock(t){ S.clock = t; $('#clock').textContent = t; }
+function addMin(t, m){
+  let [h, mm] = t.split(':').map(Number); mm += m; h += Math.floor(mm / 60); mm %= 60; h %= 24;
+  return h + ':' + String(mm).padStart(2, '0');
+}
+const hourOf = t => Number(t.split(':')[0]);
+
+function setMood(m){
+  S.mood = m;
+  setStatus();
+  const a = $('#hdrAva'); a.className = 'ava m-' + m;
+}
+function rollMood(){
+  const w = S.anx < 40 ? [55,25,20] : S.anx < 70 ? [30,35,35] : [10,40,50];
+  let x = Math.random() * 100;
+  const keys = ['amae','yami','ikari'];
+  for(let i = 0; i < 3; i++){ if((x -= w[i]) < 0) return keys[i]; }
+  return 'ikari';
+}
 
 function renderMeters(){
   const l = $('#mLove'), a = $('#mAnx');
@@ -541,7 +623,7 @@ function setInput(on){
 
 function showChoices(n, g){
   choicesEl.innerHTML = '';
-  n.choices.forEach(c => {
+  shuffle(n.choices).forEach(c => {
     const b = document.createElement('button'); b.type = 'button';
     if(c.stamp){ b.innerHTML = `<span class="stampc">${c.stamp}</span> <span class="hint">スタンプを送る</span>`; }
     else b.textContent = c.t;
@@ -549,6 +631,7 @@ function showChoices(n, g){
     choicesEl.appendChild(b);
   });
   choicesEl.hidden = false; choicesEl.scrollTop = 0;
+  S.shownAt = Date.now();
   setInput(true);
 }
 function hideChoices(){ choicesEl.hidden = true; choicesEl.innerHTML = ''; setInput(false); }
@@ -556,9 +639,9 @@ function hideChoices(){ choicesEl.hidden = true; choicesEl.innerHTML = ''; setIn
 function classify(raw){
   const t = raw.replace(/\s/g, '');
   if(/別れ|わかれよ|うざ|ウザ|めんどくさ|めんどい|面倒|重い|おもい|しつこ|黙れ|だまれ|知らん|しらん|きも|キモ|無理|むり|勝手にし|どうでもい|うるさ|ほっといて|放っといて|リサ|元カノ|浮気|^は[？?]|^はぁ/.test(t)) return 'bad';
-  if(/どうしたの|どした|何かあった|なにかあった|なんかあった|話きく|話聞く|聞くよ|きくよ|寂し|さみし|不安|ひとりにしない|一人にしない/.test(t)) return 'care';
-  if(/好き|すき|愛して|あいして|大事|大切|かわい|可愛|会いたい|あいたい|一番|いちばん|ずっと|一緒|いっしょ|ぎゅ|大丈夫|安心|信じて|❤|♡|💕|💗|🥰|😘/.test(t)) return 'love';
-  if(/ごめん|ゴメン|すまん|すみません|申し訳|悪かった|わるかった/.test(t)) return 'sorry';
+  if(/ごめん|ゴメン|すまん|すみません|申し訳|悪かった|わるかった/.test(t)) return 'apology';
+  if(/どうしたの|どした|何かあった|なにかあった|なんかあった|話きく|話聞く|聞くよ|きくよ|寂し|さみし|不安|ひとりにしない|一人にしない|何がいや|なにがいや/.test(t)) return 'question';
+  if(/好き|すき|愛して|あいして|大事|大切|かわい|可愛|会いたい|あいたい|一番|いちばん|ずっと|一緒|いっしょ|ぎゅ|大丈夫|安心|信じて|❤|♡|💕|💗|🥰|😘/.test(t)) return 'sweet';
   if(t.length <= 3 || /^(うん|おけ|ok|OK|りょ|へー|ふーん|そう|そっか|はい|w+|草)$/i.test(t)) return 'cold';
   return 'neutral';
 }
@@ -567,40 +650,70 @@ $('#compose').addEventListener('submit', e => {
   e.preventDefault();
   const text = msgIn.value.trim();
   if(!text || msgIn.disabled || !S || S.over) return;
-  const n = NODES[S.node];
+  const n = S.plan[S.idx];
   const same = n && n.choices && n.choices.find(c => c.t === text);
   if(same) return choose(same, S.gen);
-  const cat = classify(text);
+  // 服イベントは A / B の文字が入っていれば選んだことにする
+  if(n && n.dress){
+    const p = /[AＡaａ黒くろ]/.test(text) ? 'A' : /[BＢbｂ白しろ]/.test(text) ? 'B' : null;
+    if(p) return choose({ t:text, pick:p }, S.gen);
+  }
+  let cat = classify(text);
   const f = FREE[cat];
-  let love = f.love, anx = f.anx;
-  if(text.length >= 40 && cat !== 'bad' && cat !== 'cold'){ anx -= 5; }
-  const r = f.r[Math.floor(Math.random() * f.r.length)].slice();
-  if(text.length >= 40 && cat !== 'bad' && cat !== 'cold') r.unshift('長文うれしい…');
+  let love = f.love, anx = f.anx, r = rnd(f.r).slice();
+  if(S.lastFree === text){ love = -10; anx = 20; r = ['さっきと同じこと言ってる','コピペ？']; cat = 'copy'; }
+  else if(S.lastCat === cat && cat === 'sweet'){ love = 2; anx = 4; r = ['それ、さっきも聞いた','言えばいいと思ってるでしょ']; }
+  else if(text.length >= 40 && cat !== 'bad' && cat !== 'cold'){ anx -= 6; r.unshift('長文うれしい…'); }
+  S.lastFree = text; S.lastCat = cat;
   S.free++;
-  choose({ t:text, love, anx, r }, S.gen);
+  choose({ t:text, tag:f.tag, love, anx, r, free:true }, S.gen);
 });
 
 async function choose(c, g){
   if(g !== S.gen || S.over) return;
   const g2 = ++S.gen;
+  const tooFast = Date.now() - S.shownAt < 2000;
   stopTimer(); hideChoices();
   me(c.stamp ? {s:c.stamp} : c.t);
   S.replies++;
+  if(c.flag) S.flags[c.flag] = true;
   await sleep(700);
   if(c.end) return ending(c.end);
-  apply(c.love, c.anx);
-  await her(c.r, g2);
+
+  let love = c.love || 0, anx = c.anx || 0, r = (c.r || []).slice();
+
+  // 服イベント：正解は彼女の中で最初から決まっている
+  if(c.pick){
+    if(c.pick === S.dressAns){ love = 8; anx = -10; r = ['だよね！','みゆもそっちがいいと思ってた']; }
+    else { love = -12; anx = 18; r = ['え、そっち？', c.pick === 'A' ? '黒って地味じゃない？' : '白は汚れるじゃん', 'みゆのことわかってないね']; }
+  }
+
+  // 気分による補正
+  const m = c.tag && MOODS[S.mood].mod[c.tag];
+  if(m){
+    love += m.love || 0; anx += m.anx || 0;
+    if(m.line) r = m.line.slice();
+  }
+
+  // 早すぎる返信も疑われる
+  if(tooFast && S.fastWarn < 2){
+    S.fastWarn++; anx += 8;
+    r.unshift('返信はや', 'ずっとスマホ見てたの？誰と連絡してたの？');
+  }
+
+  apply(love, anx);
+  await her(r, g2);
   if(g2 !== S.gen) return;
   if(deadCheck('reply')) return;
-  await sleep(600);
-  runNode(S.node + 1);
+  await sleep(500);
+  runNode(S.idx + 1);
 }
 
 /* ================= タイマーと追いLINE ================= */
 function startTimer(g){
   const sec = DIFF[diffKey].sec;
   const until = Date.now() + sec * 1000;
-  const tm = $('#timer'); tm.hidden = false;
+  const tm = $('#timer');
   const upd = () => {
     if(g !== S.gen || S.over){ stopTimer(); return; }
     const left = Math.max(0, until - Date.now());
@@ -618,10 +731,10 @@ async function chase(g){
   if(g !== S.gen || S.over) return;
   S.ignored++; S.timeouts++;
   const lvl = Math.min(S.timeouts - 1, CHASE.length - 1);
-  const pool = CHASE[lvl];
-  const items = pool[Math.floor(Math.random() * pool.length)];
+  const items = rnd(CHASE[lvl]);
   buzz(200);
-  apply(-3, DIFF[diffKey].chase);
+  if(S.mood !== 'ikari') setMood('ikari');   // 待たされると怒りに変わる
+  apply(-4, DIFF[diffKey].chase);
   const ok = await her(items, g);
   if(!ok) return;
   if(deadCheck('chase')) return;
@@ -634,9 +747,9 @@ function runCall(n, g){
   $('#callSt').textContent = '音声通話の着信…'; $('#callCap').textContent = '';
   $('#callActs').hidden = false;
   setInput(false);
-  let ringT = setInterval(() => { blip('ring'); buzz([300,200,300]); }, 1400);
+  const ringT = setInterval(() => { blip('ring'); buzz([300,200,300]); }, 1400);
   blip('ring');
-  const limit = setTimeout(() => pick('timeout'), DIFF[diffKey].sec * 1000);
+  const limit = setTimeout(() => pick('timeout'), Math.max(5, DIFF[diffKey].sec - 2) * 1000);
   const btns = [...ov.querySelectorAll('[data-a]')];
   const handlers = btns.map(b => { const h = () => pick(b.dataset.a); b.addEventListener('click', h); return [b, h]; });
 
@@ -646,10 +759,11 @@ function runCall(n, g){
     if(g !== S.gen || S.over){ ov.hidden = true; return; }
     const g2 = ++S.gen;
     if(a === 'answer'){
-      const c = n.answer;
+      // 怒っているときに出ると、無言の長電話になる
+      const c = S.mood === 'ikari' ? n.answerIkari : n.answer;
       $('#callActs').hidden = true; $('#callSt').textContent = '通話中 00:00';
-      let s = 0; const ct = setInterval(() => { s += 37; $('#callSt').textContent = '通話中 ' + String(Math.floor(s/60)).padStart(2,'0') + ':' + String(s%60).padStart(2,'0'); }, 120);
-      for(const line of c.cap){ $('#callCap').textContent = '「' + line + '」'; await sleep(1500); }
+      let s = 0; const ct = setInterval(() => { s += S.mood === 'ikari' ? 211 : 37; $('#callSt').textContent = '通話中 ' + String(Math.floor(s/60)).padStart(2,'0') + ':' + String(s%60).padStart(2,'0'); }, 120);
+      for(const line of c.cap){ $('#callCap').textContent = '「' + line + '」'; await sleep(1400); }
       clearInterval(ct); ov.hidden = true;
       if(S.over) return;
       addRow('her', {call:c.dur}); S.replies++;
@@ -664,25 +778,50 @@ function runCall(n, g){
       ov.hidden = true;
       const c = n.decline; addRow('her', {miss:1});
       if(a === 'timeout') S.ignored++;
-      await sleep(400); apply(c.love, c.anx + (a === 'timeout' ? 5 : 0));
+      setMood('ikari');
+      await sleep(400); apply(c.love, c.anx + (a === 'timeout' ? 6 : 0));
       await her(c.r, g2);
     }
     if(g2 !== S.gen) return;
     if(deadCheck(a === 'timeout' ? 'chase' : 'reply')) return;
     await sleep(600);
-    runNode(S.node + 1);
+    runNode(S.idx + 1);
   }
 }
 
 /* ================= 進行 ================= */
+function buildPlan(){
+  // 本編10場面のすき間（電話の直前と最終場面の直前は避ける）に理不尽イベントを3つ
+  const evs = shuffle(EVENTS).slice(0, 3);
+  const slots = shuffle([1, 2, 3, 4, 6, 7]).slice(0, 3).sort((a, b) => a - b);
+  const plan = [];
+  NODES.forEach((n, i) => {
+    plan.push(n);
+    const k = slots.indexOf(i);
+    if(k >= 0) plan.push(evs[k]);
+  });
+  return plan;
+}
+
 async function runNode(i){
   if(S.over) return;
-  if(i >= NODES.length) return morning();
-  S.node = i; S.timeouts = 0;
-  const n = NODES[i], g = ++S.gen;
-  setClock(n.time);
-  if(i > 0 && NODES[i-1].time.length > n.time.length) addSys('日付が変わりました');
+  if(i >= S.plan.length) return morning();
+  S.idx = i; S.timeouts = 0;
+  const n = S.plan[i], g = ++S.gen;
+  const prevClock = S.clock;
+  setClock(n.time || addMin(S.clock, 4 + Math.floor(Math.random() * 6)));
+  if(hourOf(prevClock) >= 12 && hourOf(S.clock) < 12) addSys('日付が変わりました');
+  if(i > 0){ apply(0, DIFF[diffKey].creep); if(deadCheck('reply')) return; }
+  setMood(rollMood());
+  if(n.dress) S.dressAns = Math.random() < .5 ? 'A' : 'B';
   if(n.kind === 'call') return runCall(n, g);
+  // 過去の選択を蒸し返す
+  for(const p of (n.pre || [])){
+    if(!S.flags[p.flag]) continue;
+    if(!(await her(p.msgs, g))) return;
+    apply(0, p.anx);
+    if(deadCheck('reply')) return;
+  }
   const ok = await her(n.msgs, g);
   if(!ok) return;
   showChoices(n, g);
@@ -691,9 +830,9 @@ async function runNode(i){
 
 function morning(){
   let k;
-  if(S.love >= 85 && S.anx <= 25) k = 'true';
-  else if(S.anx >= 60) k = 'watch';
-  else if(S.love >= 70 && S.anx <= 40) k = 'good';
+  if(S.love >= 90 && S.anx <= 20) k = 'true';
+  else if(S.anx >= 55) k = 'watch';
+  else if(S.love >= 75 && S.anx <= 35) k = 'good';
   else k = 'normal';
   setClock('7:00');
   addSys('朝になりました');
@@ -714,7 +853,7 @@ async function ending(key){
   if(!ok) return;
   await sleep(1400);
   if(g !== S.gen) return;
-  if(!gotEnds.includes(key)){ gotEnds.push(key); store(false, gotEnds); }
+  if(!gotEnds.includes(key)){ gotEnds.push(key); saveEnds(gotEnds); }
   showEnd(key);
 }
 
@@ -735,7 +874,8 @@ function showEnd(key){
   $('#sLove').textContent = S.love; $('#sAnx').textContent = S.anx;
   $('#sIgn').textContent = S.ignored; $('#sRep').textContent = S.replies;
   renderColl($('#collEnd'), $('#collLbl2'));
-  const txt = `『既読無視は、許さない。』で【${E.title}】になりました。\n好感${S.love} / 不安${S.anx} / 既読無視${S.ignored}回`;
+  const dl = { yuru:'ゆるめ', normal:'ふつう', oni:'鬼' }[diffKey];
+  const txt = `『既読無視は、許さない。』（${dl}）で【${E.title}】になりました。\n好感${S.love} / 不安${S.anx} / 既読無視${S.ignored}回`;
   $('#shareBtn').href = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(txt + '\n' + location.href.split('#')[0]);
   $('#end').hidden = false;
   $('#end').scrollTop = 0;
@@ -743,12 +883,14 @@ function showEnd(key){
 
 function start(){
   try{ audio = audio || new (window.AudioContext || window.webkitAudioContext)(); audio.resume && audio.resume(); }catch(e){ audio = null; }
-  S = { love:55, anx:30, node:-1, gen:0, ignored:0, replies:0, free:0, timeouts:0, clock:'18:55', over:false };
+  S = { love:50, anx:35, idx:-1, gen:0, ignored:0, replies:0, free:0, timeouts:0, clock:'18:55', over:false,
+        mood:'amae', flags:{}, shownAt:0, fastWarn:0, lastFree:'', lastCat:'', dressAns:'A', plan:buildPlan() };
   [...skips].forEach(f => f());
   stopTimer(); hideChoices();
   log.innerHTML = '';
   $('#title').hidden = true; $('#end').hidden = true; $('#call').hidden = true;
   $('#chat').hidden = false;
+  setMood('amae');
   renderMeters();
   const d = document.createElement('div'); d.className = 'day'; d.textContent = '今日'; log.appendChild(d);
   me('バイトおわった〜');
